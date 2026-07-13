@@ -1,10 +1,10 @@
-import { createInertiaApp } from '@inertiajs/react';
 import { createRoot } from 'react-dom/client';
-import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import axios from 'axios';
+import App from './Pages/Notes/Index';
 import '../css/app.css';
 
 axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+axios.defaults.headers.common['Accept'] = 'application/json';
 axios.defaults.withCredentials = true;
 axios.defaults.xsrfCookieName = 'XSRF-TOKEN';
 axios.defaults.xsrfHeaderName = 'X-XSRF-TOKEN';
@@ -17,19 +17,10 @@ if (csrfToken) {
     axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
 }
 
-const appName = import.meta.env.VITE_APP_NAME || 'Note';
+const root = document.getElementById('app');
 
-createInertiaApp({
-    title: (title) => (title ? `${title} · ${appName}` : appName),
-    resolve: (name) =>
-        resolvePageComponent(
-            `./Pages/${name}.tsx`,
-            import.meta.glob('./Pages/**/*.tsx'),
-        ),
-    setup({ el, App, props }) {
-        createRoot(el).render(<App {...props} />);
-    },
-    progress: {
-        color: '#0ea5e9',
-    },
-});
+if (!root) {
+    throw new Error('Root element #app not found');
+}
+
+createRoot(root).render(<App />);

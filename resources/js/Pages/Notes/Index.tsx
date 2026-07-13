@@ -1,4 +1,3 @@
-import { Head } from '@inertiajs/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as notesApi from '@/api/notes';
 import * as tabsApi from '@/api/tabs';
@@ -14,6 +13,10 @@ const ACTIVE_TAB_KEY = 'note.activeTabId';
 export default function Index() {
     const shellRef = useRef<HTMLDivElement>(null);
     const { isFullscreen, toggle } = useFullscreen(shellRef);
+
+    useEffect(() => {
+        document.title = 'Заметки · Note';
+    }, []);
 
     const [tabs, setTabs] = useState<Tab[]>([]);
     const [activeTabId, setActiveTabId] = useState<string | null>(null);
@@ -202,8 +205,6 @@ export default function Index() {
     };
 
     return (
-        <>
-            <Head title="Заметки" />
             <div
                 ref={shellRef}
                 className="note-shell relative flex min-h-screen flex-col overflow-hidden"
@@ -309,6 +310,5 @@ export default function Index() {
                     </div>
                 )}
             </div>
-        </>
     );
 }

@@ -2,12 +2,14 @@
 
 Личное веб-приложение для быстрых заметок: вкладки как в браузере, внутри каждой — список заметок (обычные / важные / мусор). Без регистрации в MVP.
 
+Клиенты общаются только через **REST API** (+ Swagger). Web UI — React SPA на axios. Тот же API рассчитан на будущее Flutter-приложение.
+
 ## Стек
 
-- Laravel 12 + PHP 8.2+
-- Inertia.js + React + TypeScript
-- Tailwind CSS 4
-- OpenAPI (l5-swagger)
+- Backend: Laravel 12 + PHP 8.2+ (REST API)
+- Docs: OpenAPI / Swagger (l5-swagger)
+- Web UI: React + TypeScript + Tailwind CSS 4 (Vite SPA)
+- БД: SQLite локально (совместимо с MySQL/Postgres через Eloquent)
 
 ## Запуск
 
@@ -22,7 +24,8 @@ npm install
 composer run dev
 ```
 
-- Приложение: http://127.0.0.1:8000
+- Web SPA: http://127.0.0.1:8000
+- REST API: http://127.0.0.1:8000/api/...
 - Swagger UI: http://127.0.0.1:8000/api/documentation
 
 Перегенерация OpenAPI:
@@ -30,6 +33,8 @@ composer run dev
 ```bash
 php artisan l5-swagger:generate
 ```
+
+CORS для внешних клиентов (Flutter / отдельный фронт) — `CORS_ALLOWED_ORIGINS` в `.env` (по умолчанию `*`).
 
 ## Возможности MVP
 
