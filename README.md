@@ -52,6 +52,8 @@ CORS для внешних клиентов (Flutter / отдельный фро
 
 ## Git workflow
 
+Полные правила: [`rules/git-flow.txt`](rules/git-flow.txt).
+
 - Интеграционная ветка: **`dev`**. В `main` мержит только владелец репозитория.
 - На каждую задачу — ветка `feature/<slug>` или `chore/<slug>` от `dev`.
 - После готовности: commit → push ветки → merge в `dev` → push `dev`.
