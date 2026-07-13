@@ -1,0 +1,23 @@
+# Backend (Laravel)
+
+Stack: PHP 8.2+, PSR-12, declare(strict_types=1);
+
+Layers: Controller → FormRequest → Service → Model; out=Resource; auth=Policy
+
+## Must
+- One class = one job (SRP). SOLID where it pays off.
+- Controller: get request → call Service → return Resource/response. No business logic. No validation arrays.
+- FormRequest: all validation. Rules from config() for limits/defaults.
+- Service: business ops, multi-model, side effects, external calls.
+- Resource: only API shape. Never return Eloquent models raw.
+- Policy: authorization (MVP may allow-all). Permissions later.
+- Model: $fillable, $casts (+ Enum), relations, scopes. No fat logic.
+- Enum: statuses/kinds/roles — never magic strings.
+- config/*: limits, defaults, integrations, env-tunable values.
+- API methods: OpenAPI attrs above action; request≈FormRequest, response≈Resource.
+- Names: clear. DRY. No unused use.
+
+## Never
+- dd/dump/var_dump/ray, commented-out junk, dead code
+- Business logic in Controller/Model
+- Duplicate validation or response shaping outside FormRequest/Resource

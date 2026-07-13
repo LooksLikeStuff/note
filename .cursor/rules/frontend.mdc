@@ -1,0 +1,34 @@
+---
+description: React SPA layers and code style (compact, mirrors backend)
+globs: "resources/js/**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Frontend (React SPA)
+
+Stack: React + TS strict + Tailwind. Data via REST /api only (axios).
+
+Layers: Page → Component → hook; HTTP in api/; DTO in types/
+
+Map↔backend: Page≈Controller | hook/api≈Service | types≈Resource | UI checks≈FormRequest | auth later≈Policy
+
+## Layout
+- Pages/: screen state, effects, api orchestration
+- Components/: UI + callbacks only
+- hooks/: reusable logic (useX)
+- api/: thin HTTP wrappers on shared client
+- types/: API DTOs / unions; no runtime logic
+
+## Must
+- Typed props/state. Prefer explicit types over any.
+- Components: no axios/fetch. Call via props or Page/hook.
+- api/: no JSX. One module per resource (tabs, notes…).
+- Errors: surface to user; never empty catch.
+- Names: PascalCase components/files; camelCase fns; useX hooks.
+- Styles: Tailwind + CSS vars (app.css). Keep UI lean.
+- Keep Page thin: extract repeated logic to hooks.
+
+## Never
+- Business/HTTP logic inside presentational Components
+- Duplicate API calls / types across files
+- Dead code, console noise in prod paths, untyped any without reason
