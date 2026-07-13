@@ -1,0 +1,25 @@
+# Note — context
+
+Personal notes app: browser-like tabs; each tab holds notes (regular / important / trash).
+No auth in MVP. One shared dataset per instance.
+
+## Clients
+- Web: React SPA → REST `/api`
+- Future: Flutter (same API + Swagger)
+
+## Stack
+Laravel 12 API + l5-swagger | React+TS+Tailwind | SQLite (local)
+
+## Domains
+- Tab: container; sort by last_note_at
+- Note: belongs to Tab; kind=regular|important|trash; sort by updated_at
+
+## Docs map (extend here)
+- context — product/domain (this file)
+- rules/backend.txt — PHP layers
+- rules/frontend.txt — SPA layers
+- rules/git-flow.txt — branches
+- /api/documentation — OpenAPI
+
+## Out of MVP
+auth, multi-user, sync/realtime, attachments, rich text, PWA
