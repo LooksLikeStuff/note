@@ -1,20 +1,36 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import type { DraggableAttributes, DraggableSyntheticListeners } from '@dnd-kit/core';
+import type { ThemeTabChip } from '@/types/theme';
 import type { Tab } from '@/types/note';
 
 type Props = {
     tab: Tab;
     isActive: boolean;
+    chip: ThemeTabChip;
     onSelect: (id: string) => void;
     onRename: (id: string, title: string) => void;
     onClose: (id: string) => void;
+    setNodeRef?: (node: HTMLElement | null) => void;
+    style?: CSSProperties;
+    dragAttributes?: DraggableAttributes;
+    dragListeners?: DraggableSyntheticListeners;
+    isDragging?: boolean;
+    isOverlay?: boolean;
 };
 
 export default function TabItem({
     tab,
     isActive,
+    chip,
     onSelect,
     onRename,
     onClose,
+    setNodeRef,
+    style,
+    dragAttributes,
+    dragListeners,
+    isDragging = false,
+    isOverlay = false,
 }: Props) {
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState(tab.title);
@@ -40,22 +56,42 @@ export default function TabItem({
         }
     };
 
+    const className = [
+        'note-tab group relative flex min-w-[148px] max-w-[240px] shrink-0 items-center gap-2.5 rounded-t-2xl px-4 py-2.5 text-base',
+        isOverlay ? 'note-tab--overlay' : '',
+        isDragging ? 'note-tab--dragging' : '',
+        isActive
+            ? `z-10 -mb-px ${chip.bgActive} ${chip.textActive} shadow-lg ${chip.shadow} ring-2 ring-white/70 ring-inset`
+            : `${chip.bg} ${chip.text} opacity-85 hover:-translate-y-0.5 hover:opacity-100`,
+    ]
+        .filter(Boolean)
+        .join(' ');
+
     return (
         <div
+            ref={setNodeRef}
             role="tab"
             aria-selected={isActive}
-            className={[
-                'group relative flex min-w-[140px] max-w-[220px] shrink-0 items-center gap-2 rounded-t-xl px-3 py-2 text-sm transition-all duration-200',
-                isActive
-                    ? 'z-10 bg-white text-slate-900 shadow-[0_-2px_12px_rgba(14,165,233,0.18)]'
-                    : 'bg-white/45 text-slate-600 hover:bg-white/70 hover:text-slate-800',
-            ].join(' ')}
-            onClick={() => onSelect(tab.id)}
+            aria-grabbed={isDragging || isOverlay}
+            className={className}
+            style={style}
+            onClick={() => {
+                if (!isOverlay && !isDragging) {
+                    onSelect(tab.id);
+                }
+            }}
             onDoubleClick={(e) => {
+                if (isOverlay || isDragging) {
+                    return;
+                }
                 e.stopPropagation();
                 setEditing(true);
             }}
+            {...(editing ? {} : dragAttributes)}
+            {...(editing ? {} : dragListeners)}
         >
+            <span className="note-tab__lift pointer-events-none absolute inset-0 rounded-t-xl" aria-hidden />
+
             {editing ? (
                 <input
                     ref={inputRef}
@@ -72,23 +108,30 @@ export default function TabItem({
                         }
                     }}
                     onClick={(e) => e.stopPropagation()}
-                    className="w-full min-w-0 bg-transparent outline-none"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className="relative z-[1] w-full min-w-0 bg-transparent font-medium outline-none"
                 />
             ) : (
-                <span className="truncate font-medium">{tab.title}</span>
+                <span className="relative z-[1] truncate font-medium tracking-tight">{tab.title}</span>
             )}
 
-            <button
-                type="button"
-                aria-label="Закрыть вкладку"
-                className="ml-auto rounded-md px-1 text-slate-400 opacity-0 transition group-hover:opacity-100 hover:bg-slate-100 hover:text-slate-700"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onClose(tab.id);
-                }}
-            >
-                ×
-            </button>
+            {!isOverlay && (
+                <button
+                    type="button"
+                    aria-label="Закрыть вкладку"
+                    className={[
+                        'relative z-[1] ml-auto flex h-6 w-6 items-center justify-center rounded-md text-base leading-none text-current/70 opacity-0 transition group-hover:opacity-100',
+                        chip.closeHover,
+                    ].join(' ')}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onClose(tab.id);
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                >
+                    ×
+                </button>
+            )}
         </div>
     );
 }

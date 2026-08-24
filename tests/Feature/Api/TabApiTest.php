@@ -14,20 +14,20 @@ final class TabApiTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_lists_tabs_sorted_by_last_note_at_desc_with_nulls_last(): void
+    public function test_lists_tabs_sorted_by_position(): void
     {
-        $older = Tab::factory()->create([
-            'title' => 'Older',
-            'last_note_at' => now()->subDay(),
-            'position' => 0,
-        ]);
-        $newer = Tab::factory()->create([
-            'title' => 'Newer',
+        $second = Tab::factory()->create([
+            'title' => 'Second',
             'last_note_at' => now(),
             'position' => 1,
         ]);
-        $empty = Tab::factory()->create([
-            'title' => 'Empty',
+        $first = Tab::factory()->create([
+            'title' => 'First',
+            'last_note_at' => now()->subDay(),
+            'position' => 0,
+        ]);
+        $third = Tab::factory()->create([
+            'title' => 'Third',
             'last_note_at' => null,
             'position' => 2,
         ]);
@@ -37,7 +37,7 @@ final class TabApiTest extends TestCase
         $response->assertOk();
         $ids = collect($response->json('data'))->pluck('id')->all();
 
-        $this->assertSame([$newer->id, $older->id, $empty->id], $ids);
+        $this->assertSame([$first->id, $second->id, $third->id], $ids);
     }
 
     public function test_creates_tab_with_default_title(): void
@@ -70,11 +70,15 @@ final class TabApiTest extends TestCase
         $first = Tab::factory()->create(['position' => 0]);
         $second = Tab::factory()->create(['position' => 1]);
 
-        $this->patchJson('/api/tabs/reorder', [
+        $response = $this->patchJson('/api/tabs/reorder', [
             'ids' => [$second->id, $first->id],
-        ])->assertOk();
+        ]);
 
+        $response->assertOk();
         $this->assertSame(0, $second->fresh()->position);
         $this->assertSame(1, $first->fresh()->position);
+
+        $ids = collect($response->json('data'))->pluck('id')->all();
+        $this->assertSame([$second->id, $first->id], $ids);
     }
 }

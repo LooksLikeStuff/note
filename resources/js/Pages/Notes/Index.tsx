@@ -1,14 +1,26 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import * as notesApi from '@/api/notes';
 import * as tabsApi from '@/api/tabs';
+import ConfirmModal from '@/Components/ConfirmModal';
+import ContextMenu from '@/Components/ContextMenu';
 import FullscreenToggle from '@/Components/FullscreenToggle';
+import NoteEditModal from '@/Components/NoteEditModal';
 import NoteEditor from '@/Components/NoteEditor';
 import NoteList from '@/Components/NoteList';
 import TabBar from '@/Components/TabBar';
+import { useActiveTheme } from '@/hooks/useActiveTheme';
+import { useDiscardBlankNote } from '@/hooks/useDiscardBlankNote';
 import { useFullscreen } from '@/hooks/useFullscreen';
+import { isNoteBlank } from '@/lib/isNoteBlank';
 import type { KindFilter, Note, NoteKind, Tab } from '@/types/note';
 
 const ACTIVE_TAB_KEY = 'note.activeTabId';
+
+type NoteMenuState = {
+    noteId: string;
+    x: number;
+    y: number;
+};
 
 export default function Index() {
     const shellRef = useRef<HTMLDivElement>(null);
@@ -25,10 +37,32 @@ export default function Index() {
     const [filter, setFilter] = useState<KindFilter>('all');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [noteMenu, setNoteMenu] = useState<NoteMenuState | null>(null);
+    const [editNoteId, setEditNoteId] = useState<string | null>(null);
+    const [deleteNoteId, setDeleteNoteId] = useState<string | null>(null);
+
+    const theme = useActiveTheme(tabs, activeTabId);
+    const { handleDraftChange, flushOrDiscardSelectedNote } = useDiscardBlankNote({
+        notes,
+        selectedNoteId,
+        activeTabId,
+        setNotes,
+        setTabs,
+    });
 
     const selectedNote = useMemo(
         () => notes.find((note) => note.id === selectedNoteId) ?? null,
         [notes, selectedNoteId],
+    );
+
+    const editNote = useMemo(
+        () => notes.find((note) => note.id === editNoteId) ?? null,
+        [notes, editNoteId],
+    );
+
+    const deleteNote = useMemo(
+        () => notes.find((note) => note.id === deleteNoteId) ?? null,
+        [notes, deleteNoteId],
     );
 
     const persistActiveTab = (id: string | null) => {
@@ -103,7 +137,36 @@ export default function Index() {
         });
     }, [activeTabId, filter, loadNotes]);
 
+    const handleSelectTab = async (id: string) => {
+        if (id === activeTabId) {
+            return;
+        }
+
+        await flushOrDiscardSelectedNote();
+        persistActiveTab(id);
+    };
+
+    const handleSelectNote = async (id: string) => {
+        if (id === selectedNoteId) {
+            return;
+        }
+
+        await flushOrDiscardSelectedNote();
+        setSelectedNoteId(id);
+    };
+
+    const handleFilterChange = async (next: KindFilter) => {
+        if (next === filter) {
+            return;
+        }
+
+        await flushOrDiscardSelectedNote();
+        setSelectedNoteId(null);
+        setFilter(next);
+    };
+
     const handleCreateTab = async () => {
+        await flushOrDiscardSelectedNote();
         const tab = await tabsApi.createTab();
         const list = await loadTabs(tab.id);
         if (list) {
@@ -128,6 +191,10 @@ export default function Index() {
             }
         }
 
+        if (id === activeTabId) {
+            await flushOrDiscardSelectedNote();
+        }
+
         await tabsApi.deleteTab(id);
         const remaining = tabs.filter((item) => item.id !== id);
         setTabs(remaining);
@@ -138,10 +205,33 @@ export default function Index() {
         }
     };
 
+    const handleReorderTabs = async (ids: string[]) => {
+        const previous = tabs;
+        const byId = new Map(tabs.map((tab) => [tab.id, tab]));
+        const optimistic = ids
+            .map((id, index) => {
+                const tab = byId.get(id);
+                return tab ? { ...tab, position: index } : null;
+            })
+            .filter((tab): tab is Tab => tab !== null);
+
+        setTabs(optimistic);
+
+        try {
+            const list = await tabsApi.reorderTabs(ids);
+            setTabs(list);
+        } catch {
+            setTabs(previous);
+            setError('Не удалось изменить порядок вкладок');
+        }
+    };
+
     const handleCreateNote = async () => {
         if (!activeTabId) {
             return;
         }
+
+        await flushOrDiscardSelectedNote();
 
         const note = await notesApi.createNote(activeTabId, {
             title: '',
@@ -155,16 +245,15 @@ export default function Index() {
         setSelectedNoteId(note.id);
     };
 
-    const handleUpdateNote = async (payload: {
-        title?: string | null;
-        body?: string | null;
-        kind?: NoteKind;
-    }) => {
-        if (!selectedNote) {
-            return;
-        }
-
-        const updated = await notesApi.updateNote(selectedNote.id, payload);
+    const handleUpdateNote = async (
+        noteId: string,
+        payload: {
+            title?: string | null;
+            body?: string | null;
+            kind?: NoteKind;
+        },
+    ) => {
+        const updated = await notesApi.updateNote(noteId, payload);
         setNotes((prev) =>
             prev
                 .map((note) => (note.id === updated.id ? updated : note))
@@ -181,134 +270,214 @@ export default function Index() {
         }
 
         if (payload.kind && filter !== 'all' && payload.kind !== filter) {
-            setSelectedNoteId(null);
+            setSelectedNoteId((current) => (current === noteId ? null : current));
         }
     };
 
-    const handleDeleteNote = async () => {
-        if (!selectedNote || !activeTabId) {
+    const handleDeleteNote = async (note: Note) => {
+        if (!activeTabId) {
             return;
         }
 
-        const message =
-            selectedNote.kind === 'trash'
-                ? 'Удалить заметку окончательно?'
-                : 'Переместить заметку в корзину?';
-
-        if (!window.confirm(message)) {
-            return;
-        }
-
-        await notesApi.deleteNote(selectedNote.id);
+        await notesApi.deleteNote(note.id);
         await loadTabs(activeTabId);
         await loadNotes(activeTabId, filter);
     };
 
     return (
-            <div
-                ref={shellRef}
-                className="note-shell relative flex min-h-screen flex-col overflow-hidden"
-            >
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.35),_transparent_45%),radial-gradient(circle_at_80%_20%,_rgba(251,191,36,0.28),_transparent_40%),radial-gradient(circle_at_bottom_right,_rgba(52,211,153,0.25),_transparent_45%)]" />
+        <div
+            ref={shellRef}
+            className="note-shell relative flex flex-col overflow-hidden"
+            data-theme={theme.id}
+            style={theme.vars as CSSProperties}
+        >
+            <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+                <div className="note-orb note-orb--1" />
+                <div className="note-orb note-orb--2" />
+                <div className="note-orb note-orb--3" />
+            </div>
 
-                <header className="relative z-10 flex items-center justify-between gap-3 px-4 pt-4 md:px-6">
-                    <div>
-                        <p className="font-display text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
-                            Note
-                        </p>
-                        <p className="text-sm text-slate-600">
-                            Быстрые заметки: мусор и важное в одном месте
-                        </p>
-                    </div>
-                    <FullscreenToggle isFullscreen={isFullscreen} onToggle={toggle} />
-                </header>
+            <div className="relative z-10 flex min-h-0 flex-1 flex-col px-2 pt-2 pb-3 md:px-4 md:pb-4">
+                <TabBar
+                    tabs={tabs}
+                    activeTabId={activeTabId}
+                    onSelect={(id) => {
+                        handleSelectTab(id).catch(() =>
+                            setError('Не удалось переключить вкладку'),
+                        );
+                    }}
+                    onCreate={() => {
+                        handleCreateTab().catch(() => setError('Не удалось создать вкладку'));
+                    }}
+                    onRename={(id, title) => {
+                        handleRenameTab(id, title).catch(() =>
+                            setError('Не удалось переименовать вкладку'),
+                        );
+                    }}
+                    onClose={(id) => {
+                        handleCloseTab(id).catch(() => setError('Не удалось удалить вкладку'));
+                    }}
+                    onReorder={(ids) => {
+                        void handleReorderTabs(ids);
+                    }}
+                    trailing={
+                        <FullscreenToggle isFullscreen={isFullscreen} onToggle={toggle} />
+                    }
+                />
 
-                <div className="relative z-10 mt-3 flex min-h-0 flex-1 flex-col px-2 pb-2 md:px-4 md:pb-4">
-                    <TabBar
-                        tabs={tabs}
-                        activeTabId={activeTabId}
-                        onSelect={persistActiveTab}
-                        onCreate={() => {
-                            handleCreateTab().catch(() => setError('Не удалось создать вкладку'));
-                        }}
-                        onRename={(id, title) => {
-                            handleRenameTab(id, title).catch(() =>
-                                setError('Не удалось переименовать вкладку'),
-                            );
-                        }}
-                        onClose={(id) => {
-                            handleCloseTab(id).catch(() => setError('Не удалось удалить вкладку'));
-                        }}
-                    />
-
-                    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/70 bg-white/35 shadow-[0_20px_60px_rgba(14,165,233,0.12)] backdrop-blur-md transition duration-300 md:flex-row">
-                        {loading ? (
-                            <div className="flex flex-1 items-center justify-center text-sm text-slate-500">
+                <div className="note-panel flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl md:flex-row">
+                    {loading ? (
+                        <div className="flex flex-1 items-center justify-center">
+                            <p
+                                className="animate-in text-base font-medium"
+                                style={{ color: 'var(--theme-muted)' }}
+                            >
                                 Загрузка…
-                            </div>
-                        ) : !activeTabId ? (
-                            <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-                                <p className="font-display text-xl font-semibold text-slate-800">
-                                    Нет вкладок
-                                </p>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        handleCreateTab().catch(() =>
-                                            setError('Не удалось создать вкладку'),
-                                        );
-                                    }}
-                                    className="rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-400"
-                                >
-                                    Создать первую вкладку
-                                </button>
-                            </div>
-                        ) : (
-                            <>
-                                <NoteList
-                                    notes={notes}
-                                    selectedId={selectedNoteId}
-                                    filter={filter}
-                                    onFilterChange={setFilter}
-                                    onSelect={setSelectedNoteId}
-                                    onCreate={() => {
-                                        handleCreateNote().catch(() =>
-                                            setError('Не удалось создать заметку'),
-                                        );
-                                    }}
-                                />
-                                <NoteEditor
-                                    note={selectedNote}
-                                    onChange={(payload) => {
-                                        handleUpdateNote(payload).catch(() =>
-                                            setError('Не удалось сохранить заметку'),
-                                        );
-                                    }}
-                                    onDelete={() => {
-                                        handleDeleteNote().catch(() =>
-                                            setError('Не удалось удалить заметку'),
-                                        );
-                                    }}
-                                />
-                            </>
-                        )}
-                    </div>
-                </div>
-
-                {error && (
-                    <div className="fixed right-4 bottom-4 z-50 rounded-xl bg-rose-600 px-4 py-2 text-sm text-white shadow-lg">
-                        <div className="flex items-center gap-3">
-                            <span>{error}</span>
+                            </p>
+                        </div>
+                    ) : !activeTabId ? (
+                        <div className="animate-in flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+                            <p className="text-lg font-medium" style={{ color: 'var(--theme-ink)' }}>
+                                Нет вкладок
+                            </p>
                             <button
                                 type="button"
-                                className="font-semibold underline"
-                                onClick={() => setError(null)}
+                                onClick={() => {
+                                    handleCreateTab().catch(() =>
+                                        setError('Не удалось создать вкладку'),
+                                    );
+                                }}
+                                className="note-btn-bubble px-5 py-2.5 text-base shadow-md"
+                                style={{
+                                    background: 'var(--theme-btn)',
+                                    color: 'var(--theme-btn-text)',
+                                    boxShadow: '0 8px 20px var(--theme-shadow)',
+                                }}
                             >
-                                Закрыть
+                                Создать
                             </button>
                         </div>
-                    </div>
-                )}
+                    ) : (
+                        <>
+                            <NoteList
+                                notes={notes}
+                                selectedId={selectedNoteId}
+                                filter={filter}
+                                onFilterChange={(next) => {
+                                    handleFilterChange(next).catch(() =>
+                                        setError('Не удалось сменить фильтр'),
+                                    );
+                                }}
+                                onSelect={(id) => {
+                                    handleSelectNote(id).catch(() =>
+                                        setError('Не удалось открыть заметку'),
+                                    );
+                                }}
+                                onCreate={() => {
+                                    handleCreateNote().catch(() =>
+                                        setError('Не удалось создать заметку'),
+                                    );
+                                }}
+                                onContextMenu={(note, position) => {
+                                    setNoteMenu({
+                                        noteId: note.id,
+                                        x: position.x,
+                                        y: position.y,
+                                    });
+                                }}
+                            />
+                            <NoteEditor
+                                note={selectedNote}
+                                onDraftChange={handleDraftChange}
+                                onChange={(payload) => {
+                                    if (!selectedNote) {
+                                        return;
+                                    }
+                                    handleUpdateNote(selectedNote.id, payload).catch(() =>
+                                        setError('Не удалось сохранить заметку'),
+                                    );
+                                }}
+                            />
+                        </>
+                    )}
+                </div>
             </div>
+
+            {noteMenu && (
+                <ContextMenu
+                    x={noteMenu.x}
+                    y={noteMenu.y}
+                    onClose={() => setNoteMenu(null)}
+                    items={[
+                        {
+                            id: 'edit',
+                            label: 'Редактировать',
+                            onSelect: () => setEditNoteId(noteMenu.noteId),
+                        },
+                        {
+                            id: 'delete',
+                            label: 'Удалить',
+                            danger: true,
+                            onSelect: () => setDeleteNoteId(noteMenu.noteId),
+                        },
+                    ]}
+                />
+            )}
+
+            <NoteEditModal
+                note={editNote}
+                open={editNoteId !== null}
+                onClose={() => setEditNoteId(null)}
+                onSave={(kind) => {
+                    if (!editNoteId) {
+                        return;
+                    }
+                    const id = editNoteId;
+                    setEditNoteId(null);
+                    handleUpdateNote(id, { kind }).catch(() =>
+                        setError('Не удалось сохранить заметку'),
+                    );
+                }}
+            />
+
+            <ConfirmModal
+                open={deleteNoteId !== null && deleteNote !== null}
+                title="Удалить заметку"
+                message={
+                    deleteNote?.kind === 'trash' ||
+                    isNoteBlank(deleteNote?.title, deleteNote?.body)
+                        ? 'Удалить заметку окончательно?'
+                        : 'Переместить заметку в корзину?'
+                }
+                confirmLabel="Удалить"
+                danger
+                onClose={() => setDeleteNoteId(null)}
+                onConfirm={() => {
+                    if (!deleteNote) {
+                        return;
+                    }
+                    const note = deleteNote;
+                    setDeleteNoteId(null);
+                    handleDeleteNote(note).catch(() =>
+                        setError('Не удалось удалить заметку'),
+                    );
+                }}
+            />
+
+            {error && (
+                <div className="note-toast fixed right-4 bottom-4 z-50 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 px-5 py-3 text-base font-semibold text-white">
+                    <div className="flex items-center gap-3">
+                        <span>{error}</span>
+                        <button
+                            type="button"
+                            className="rounded-full bg-white/20 px-2.5 py-1 text-sm font-bold transition hover:bg-white/30"
+                            onClick={() => setError(null)}
+                        >
+                            Закрыть
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 }

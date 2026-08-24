@@ -68,7 +68,9 @@ final class NoteService
         DB::transaction(function () use ($note): void {
             $tab = $note->tab()->firstOrFail();
 
-            if ($note->kind === NoteKind::Trash && (bool) config('notes.hard_delete_from_trash')) {
+            if ($this->isBlank($note)) {
+                $note->delete();
+            } elseif ($note->kind === NoteKind::Trash && (bool) config('notes.hard_delete_from_trash')) {
                 $note->delete();
             } else {
                 $note->forceFill([
@@ -78,5 +80,11 @@ final class NoteService
 
             $this->tabService->syncLastNoteAt($tab->refresh());
         });
+    }
+
+    private function isBlank(Note $note): bool
+    {
+        return trim((string) $note->title) === ''
+            && trim((string) $note->body) === '';
     }
 }

@@ -58,6 +58,20 @@ final class NoteApiTest extends TestCase
         $this->assertContains($regular->id, $ids);
     }
 
+    public function test_delete_blank_note_hard_deletes(): void
+    {
+        $tab = Tab::factory()->create();
+        $note = Note::factory()->for($tab)->create([
+            'title' => '',
+            'body' => null,
+            'kind' => NoteKind::Regular,
+        ]);
+
+        $this->deleteJson('/api/notes/'.$note->id)->assertNoContent();
+
+        $this->assertDatabaseMissing('notes', ['id' => $note->id]);
+    }
+
     public function test_delete_moves_to_trash_then_hard_deletes(): void
     {
         $tab = Tab::factory()->create();

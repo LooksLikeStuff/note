@@ -60,9 +60,6 @@ class Tab extends Model
      */
     public function scopeOrdered(Builder $query): Builder
     {
-        return $query
-            ->orderByRaw('last_note_at IS NULL')
-            ->orderByDesc('last_note_at')
-            ->orderBy('position');
+        return $query->orderBy('position');
     }
 }

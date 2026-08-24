@@ -1,27 +1,33 @@
+import { NOTE_KIND_LABELS } from '@/lib/noteKind';
 import type { NoteKind } from '@/types/note';
-
-const labels: Record<NoteKind, string> = {
-    regular: 'Мусор',
-    important: 'Важно',
-    trash: 'Корзина',
-};
-
-const styles: Record<NoteKind, string> = {
-    regular: 'bg-sky-100 text-sky-800',
-    important: 'bg-amber-200 text-amber-900',
-    trash: 'bg-slate-200 text-slate-600',
-};
 
 type Props = {
     kind: NoteKind;
 };
 
 export default function KindBadge({ kind }: Props) {
+    const style =
+        kind === 'important'
+            ? {
+                  background: 'linear-gradient(90deg, #fde68a, #fecdd3)',
+                  color: '#9f1239',
+              }
+            : kind === 'trash'
+              ? {
+                    background: 'color-mix(in srgb, var(--theme-primary-soft) 70%, white)',
+                    color: 'var(--theme-muted)',
+                }
+              : {
+                    background: 'var(--theme-primary-soft)',
+                    color: 'var(--theme-ink)',
+                };
+
     return (
         <span
-            className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold tracking-wide uppercase ${styles[kind]}`}
+            className="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold tracking-wide uppercase ring-1 ring-black/5"
+            style={style}
         >
-            {labels[kind]}
+            {NOTE_KIND_LABELS[kind]}
         </span>
     );
 }

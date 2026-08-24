@@ -9,12 +9,10 @@ type Props = {
         body?: string | null;
         kind?: NoteKind;
     }) => void;
-    onDelete: () => void;
+    onDraftChange?: (draft: { title: string; body: string }) => void;
 };
 
-const kinds: NoteKind[] = ['regular', 'important', 'trash'];
-
-export default function NoteEditor({ note, onChange, onDelete }: Props) {
+export default function NoteEditor({ note, onChange, onDraftChange }: Props) {
     const [title, setTitle] = useState('');
     const [body, setBody] = useState('');
 
@@ -23,53 +21,38 @@ export default function NoteEditor({ note, onChange, onDelete }: Props) {
         setBody(note?.body ?? '');
     }, [note?.id, note?.title, note?.body]);
 
+    useEffect(() => {
+        if (!note) {
+            return;
+        }
+
+        onDraftChange?.({ title, body });
+    }, [note, title, body, onDraftChange]);
+
     if (!note) {
         return (
-            <div className="flex h-full flex-1 items-center justify-center bg-white/40 px-6 text-center">
-                <div>
-                    <p className="font-display text-2xl font-semibold text-slate-800">
-                        Выбери заметку
-                    </p>
-                    <p className="mt-2 text-sm text-slate-500">
-                        Или создай новую — сюда можно скидывать и мусор, и важное.
-                    </p>
-                </div>
+            <div
+                className="flex h-full min-h-0 flex-1 items-center justify-center self-stretch px-6 text-center"
+                style={{ background: 'var(--theme-editor)' }}
+            >
+                <p className="animate-in text-base font-medium" style={{ color: 'var(--theme-muted)' }}>
+                    Выбери заметку или создай новую
+                </p>
             </div>
         );
     }
 
     return (
-        <section className="flex h-full min-h-0 flex-1 flex-col bg-white/70 backdrop-blur transition-opacity duration-200">
-            <div className="flex flex-wrap items-center gap-2 border-b border-sky-100/80 px-5 py-3">
+        <section
+            key={note.id}
+            className="animate-in flex h-full min-h-0 flex-1 flex-col self-stretch backdrop-blur"
+            style={{ background: 'var(--theme-editor)' }}
+        >
+            <div
+                className="flex items-center gap-2 border-b px-6 py-3.5"
+                style={{ borderColor: 'var(--theme-border)' }}
+            >
                 <KindBadge kind={note.kind} />
-                <div className="ml-auto flex flex-wrap gap-1">
-                    {kinds.map((kind) => (
-                        <button
-                            key={kind}
-                            type="button"
-                            onClick={() => onChange({ kind })}
-                            className={[
-                                'rounded-md px-2.5 py-1 text-xs font-medium transition',
-                                note.kind === kind
-                                    ? 'bg-slate-900 text-white'
-                                    : 'bg-white text-slate-600 hover:bg-sky-50',
-                            ].join(' ')}
-                        >
-                            {kind === 'regular'
-                                ? 'Мусор'
-                                : kind === 'important'
-                                  ? 'Важно'
-                                  : 'Корзина'}
-                        </button>
-                    ))}
-                    <button
-                        type="button"
-                        onClick={onDelete}
-                        className="rounded-md bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-700 transition hover:bg-rose-200"
-                    >
-                        Удалить
-                    </button>
-                </div>
             </div>
 
             <input
@@ -81,7 +64,11 @@ export default function NoteEditor({ note, onChange, onDelete }: Props) {
                     }
                 }}
                 placeholder="Заголовок"
-                className="font-display border-b border-sky-100/80 bg-transparent px-5 py-4 text-2xl font-semibold text-slate-900 outline-none placeholder:text-slate-300"
+                className="border-b bg-transparent px-6 py-5 text-3xl font-semibold tracking-tight outline-none transition"
+                style={{
+                    borderColor: 'var(--theme-border)',
+                    color: 'var(--theme-ink)',
+                }}
             />
 
             <textarea
@@ -93,7 +80,8 @@ export default function NoteEditor({ note, onChange, onDelete }: Props) {
                     }
                 }}
                 placeholder="Пиши сюда всё подряд…"
-                className="min-h-0 flex-1 resize-none bg-transparent px-5 py-4 text-base leading-relaxed text-slate-700 outline-none placeholder:text-slate-300"
+                className="min-h-0 flex-1 resize-none bg-transparent px-6 py-5 text-lg leading-relaxed font-medium outline-none transition"
+                style={{ color: 'var(--theme-ink)' }}
             />
         </section>
     );
