@@ -1,0 +1,28 @@
+---
+description: Git flow — branches, merge to dev, owner merges main
+alwaysApply: true
+---
+
+# Git flow
+
+Branches: main (stable, owner-only) ← dev (integration) ← feature/* | chore/*
+
+## Flow
+1. checkout/pull `dev`
+2. branch `feature/<slug>` or `chore/<slug>` from `dev`
+3. commits (clear why, not noise)
+4. push feature branch
+5. merge into `dev` → push `dev`
+6. `main`: merge only by repo owner (manual)
+
+## Names
+- feature/* — product work
+- chore/* — tooling, rules, deps, cleanup
+- one task = one branch
+
+## Never
+- push/commit straight to `main`
+- force-push to `main`/`dev`
+- --no-verify / skip hooks (unless owner asks)
+- amend pushed commits without explicit ask
+- empty commits; secrets in commits (.env, keys)

@@ -4,8 +4,403 @@
 @source '../../storage/framework/views/*.php';
 @source '../**/*.blade.php';
 @source '../**/*.js';
+@source '../**/*.ts';
+@source '../**/*.tsx';
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+        'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-display: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+    --theme-primary: #7c3aed;
+    --theme-primary-soft: #ddd6fe;
+    --theme-accent: #a855f7;
+    --theme-ink: #2e1065;
+    --theme-muted: rgba(91, 33, 182, 0.55);
+    --theme-border: rgba(167, 139, 250, 0.45);
+    --theme-panel: rgba(245, 243, 255, 0.55);
+    --theme-sidebar: rgba(237, 233, 254, 0.75);
+    --theme-editor: rgba(255, 255, 255, 0.7);
+    --theme-card: rgba(255, 255, 255, 0.78);
+    --theme-card-hover: rgba(255, 255, 255, 0.95);
+    --theme-card-active: linear-gradient(135deg, #7c3aed, #a855f7);
+    --theme-card-active-text: #ffffff;
+    --theme-btn: #7c3aed;
+    --theme-btn-text: #ffffff;
+    --theme-chip: rgba(255, 255, 255, 0.85);
+    --theme-chip-text: rgba(91, 33, 182, 0.7);
+    --theme-chip-active: #6d28d9;
+    --theme-chip-active-text: #ffffff;
+    --theme-shadow: rgba(124, 58, 237, 0.28);
+    --theme-shell-from: #f5f3ff;
+    --theme-shell-via: #ede9fe;
+    --theme-shell-to: #fce7f3;
+    --theme-orb-1: rgba(124, 58, 237, 0.5);
+    --theme-orb-2: rgba(168, 85, 247, 0.45);
+    --theme-orb-3: rgba(192, 132, 252, 0.4);
+    --theme-overlay: rgba(15, 10, 30, 0.42);
+    --theme-modal: rgba(255, 255, 255, 0.96);
+    --theme-menu: rgba(255, 255, 255, 0.97);
+    --theme-menu-hover: #ddd6fe;
+    --theme-danger: #e11d48;
+    --theme-danger-text: #ffffff;
+    --theme-danger-soft: rgba(225, 29, 72, 0.14);
+
+    --note-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --note-ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html,
+body,
+#app {
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    color: var(--theme-ink);
+    font-family: var(--font-sans);
+    font-size: 17px;
+    background: var(--theme-shell-from);
+}
+
+.note-shell {
+    height: 100%;
+    min-height: 100dvh;
+    background: linear-gradient(
+        155deg,
+        var(--theme-shell-from) 0%,
+        var(--theme-shell-via) 45%,
+        var(--theme-shell-to) 100%
+    );
+    color: var(--theme-ink);
+    transition:
+        background 380ms var(--note-ease-soft),
+        color 280ms ease;
+}
+
+.note-shell:fullscreen,
+.note-shell:-webkit-full-screen {
+    height: 100%;
+    min-height: 100%;
+    width: 100%;
+}
+
+.note-orb {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(48px);
+    opacity: 0.55;
+    pointer-events: none;
+    will-change: transform;
+    transition: background 380ms var(--note-ease-soft);
+}
+
+.note-orb--1 {
+    width: min(42vw, 380px);
+    height: min(42vw, 380px);
+    background: radial-gradient(circle, var(--theme-orb-1), transparent 70%);
+    top: -8%;
+    left: -6%;
+    animation: note-orb-drift 18s var(--note-ease-soft) infinite alternate;
+}
+
+.note-orb--2 {
+    width: min(36vw, 320px);
+    height: min(36vw, 320px);
+    background: radial-gradient(circle, var(--theme-orb-2), transparent 70%);
+    top: 12%;
+    right: -4%;
+    animation: note-orb-drift 22s var(--note-ease-soft) infinite alternate-reverse;
+}
+
+.note-orb--3 {
+    width: min(40vw, 360px);
+    height: min(40vw, 360px);
+    background: radial-gradient(circle, var(--theme-orb-3), transparent 70%);
+    bottom: -10%;
+    left: 30%;
+    animation: note-orb-drift 20s var(--note-ease-soft) infinite alternate;
+}
+
+.note-panel {
+    border: 2px solid color-mix(in srgb, var(--theme-border) 70%, white);
+    background: var(--theme-panel);
+    box-shadow:
+        0 20px 60px var(--theme-shadow),
+        inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(16px);
+    transition:
+        background 380ms var(--note-ease-soft),
+        border-color 380ms var(--note-ease-soft),
+        box-shadow 380ms var(--note-ease-soft);
+}
+
+.note-overlay {
+    background: var(--theme-overlay);
+    animation: note-fade-in 180ms var(--note-ease-soft) both;
+}
+
+.note-modal {
+    background: var(--theme-modal);
+    color: var(--theme-ink);
+    border: 1px solid var(--theme-border);
+    box-shadow: 0 24px 64px var(--theme-shadow);
+    animation: note-fade-in 220ms var(--note-ease-spring) both;
+}
+
+.note-menu {
+    background: var(--theme-menu);
+    color: var(--theme-ink);
+    border: 1px solid var(--theme-border);
+    box-shadow: 0 16px 40px var(--theme-shadow);
+    animation: note-fade-in 140ms var(--note-ease-soft) both;
+}
+
+.note-menu-item {
+    width: 100%;
+    text-align: left;
+    border-radius: 0.75rem;
+    padding: 0.7rem 0.9rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition: background 140ms ease;
+}
+
+.note-menu-item:hover {
+    background: var(--theme-menu-hover);
+}
+
+.note-menu-item[data-danger='true'] {
+    color: var(--theme-danger);
+}
+
+.note-menu-item[data-danger='true']:hover {
+    background: var(--theme-danger-soft);
+}
+
+.note-card {
+    background: var(--theme-card);
+    color: var(--theme-ink);
+    border: 1px solid var(--theme-border);
+    transition:
+        transform 200ms var(--note-ease-soft),
+        background 200ms ease,
+        box-shadow 220ms var(--note-ease-soft),
+        border-color 200ms ease;
+}
+
+.note-card:hover {
+    background: var(--theme-card-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 22px var(--theme-shadow);
+}
+
+.note-card[data-active='true'] {
+    background: var(--theme-card-active);
+    color: var(--theme-card-active-text);
+    border-color: transparent;
+    box-shadow: 0 12px 28px var(--theme-shadow);
+    transform: scale(1.01);
+}
+
+.note-card[data-active='true']:hover {
+    background: var(--theme-card-active);
+    transform: scale(1.01);
+}
+
+.note-btn-bubble {
+    border-radius: 9999px;
+    font-weight: 600;
+    transition:
+        transform 180ms var(--note-ease-spring),
+        box-shadow 220ms var(--note-ease-soft),
+        background-color 200ms ease;
+}
+
+.note-btn-bubble:hover {
+    transform: translateY(-1px) scale(1.03);
+}
+
+.note-btn-bubble:active {
+    transform: scale(0.95);
+}
+
+.note-toast {
+    animation: note-toast-in 320ms var(--note-ease-spring);
+    box-shadow:
+        0 12px 32px rgba(190, 24, 93, 0.35),
+        0 0 0 2px rgba(251, 113, 133, 0.45);
+}
+
+@keyframes note-orb-drift {
+    from {
+        transform: translate(0, 0) scale(1);
+    }
+    to {
+        transform: translate(24px, 18px) scale(1.08);
+    }
+}
+
+@keyframes note-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes note-slide-in {
+    from {
+        opacity: 0;
+        transform: translateX(-10px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes note-toast-in {
+    from {
+        opacity: 0;
+        transform: translateY(16px) scale(0.94);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.note-tab {
+    touch-action: none;
+    cursor: grab;
+    user-select: none;
+    transition:
+        transform 220ms var(--note-ease-spring),
+        box-shadow 200ms var(--note-ease-soft),
+        opacity 160ms ease,
+        filter 160ms ease;
+}
+
+.note-tab:active {
+    cursor: grabbing;
+}
+
+.note-tab--dragging {
+    opacity: 0.28;
+    filter: grayscale(0.15);
+    cursor: grabbing;
+    box-shadow: none !important;
+}
+
+.note-tab--dragging .note-tab__lift {
+    display: none;
+}
+
+.note-tab-overlay-wrap {
+    cursor: grabbing;
+    filter: drop-shadow(0 22px 28px var(--theme-shadow));
+    animation: note-tab-grab 200ms var(--note-ease-spring) both;
+    will-change: transform;
+}
+
+.note-tab--overlay {
+    cursor: grabbing;
+    opacity: 1 !important;
+    transform: scale(1.08) rotate(-3deg);
+    box-shadow:
+        0 24px 48px var(--theme-shadow),
+        0 8px 16px color-mix(in srgb, var(--theme-shadow) 70%, transparent),
+        inset 0 1px 0 rgba(255, 255, 255, 0.65) !important;
+}
+
+.note-tab--overlay .note-tab__lift {
+    background: linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.28) 0%,
+        transparent 55%
+    );
+    box-shadow: 0 0 0 2px color-mix(in srgb, white 55%, transparent);
+}
+
+@keyframes note-tab-grab {
+    from {
+        opacity: 0.85;
+        transform: scale(0.96) rotate(0deg);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+    }
+}
+
+.animate-in {
+    animation: note-fade-in 280ms var(--note-ease-soft) both;
+}
+
+.note-stagger > * {
+    animation: note-slide-in 360ms var(--note-ease-spring) both;
+}
+
+.note-stagger > *:nth-child(1) {
+    animation-delay: 0ms;
+}
+.note-stagger > *:nth-child(2) {
+    animation-delay: 40ms;
+}
+.note-stagger > *:nth-child(3) {
+    animation-delay: 80ms;
+}
+.note-stagger > *:nth-child(4) {
+    animation-delay: 120ms;
+}
+.note-stagger > *:nth-child(5) {
+    animation-delay: 160ms;
+}
+.note-stagger > *:nth-child(6) {
+    animation-delay: 200ms;
+}
+.note-stagger > *:nth-child(7) {
+    animation-delay: 240ms;
+}
+.note-stagger > *:nth-child(8) {
+    animation-delay: 280ms;
+}
+.note-stagger > *:nth-child(9) {
+    animation-delay: 320ms;
+}
+.note-stagger > *:nth-child(10) {
+    animation-delay: 360ms;
+}
+.note-stagger > *:nth-child(n + 11) {
+    animation-delay: 400ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .note-orb,
+    .animate-in,
+    .note-stagger > *,
+    .note-toast,
+    .note-tab-overlay-wrap {
+        animation: none !important;
+    }
+
+    .note-shell,
+    .note-panel,
+    .note-orb,
+    .note-tab {
+        transition: none !important;
+    }
+
+    .note-btn-bubble:hover,
+    .note-btn-bubble:active,
+    .note-tab--overlay {
+        transform: none;
+    }
 }

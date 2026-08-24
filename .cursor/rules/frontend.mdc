@@ -1,0 +1,64 @@
+---
+description: React SPA layers and code style (compact, mirrors backend)
+globs: "resources/js/**/*.{ts,tsx},resources/css/**/*.css"
+alwaysApply: false
+---
+
+# Frontend (React SPA)
+
+Stack: React + TS strict + Tailwind. Data via REST /api only (axios).
+
+Layers: Page → Component → hook; HTTP in api/; DTO in types/
+
+Map↔backend: Page≈Controller | hook/api≈Service | types≈Resource | UI checks≈FormRequest | auth later≈Policy
+
+## Layout
+- Pages/: screen state, effects, api orchestration
+- Components/: UI + callbacks only
+- hooks/: reusable logic (useX)
+- api/: thin HTTP wrappers on shared client
+- types/: API DTOs / unions; no runtime logic
+- lib/themes.ts: theme registry (accent palettes)
+- hooks/useActiveTheme.ts: active tab index → theme
+
+## Themes
+UI is theme-driven. Active tab index maps to a theme in `lib/themes.ts` (cycles).
+Page applies `theme.vars` + `data-theme` on the shell; Components consume `var(--theme-*)` only — no hard-coded accents per theme.
+
+### Files
+- `types/theme.ts` — `ThemeId`, `ThemeCssVars`, `AppTheme`, tab chip types
+- `lib/themes.ts` — `THEMES[]`, `themeAt`, `themeIndexForTab`
+- `hooks/useActiveTheme.ts` — resolve theme from tabs + activeTabId
+- `resources/css/app.css` — defaults for `--theme-*`, shell/panel/card helpers
+
+### Add a new theme
+1. Add id to `ThemeId` in `types/theme.ts`
+2. Append full `AppTheme` to `THEMES` in `lib/themes.ts` (every key in `ThemeCssVars` + `tab` chip)
+3. Keep order = tab color cycle; do not leave gaps or partial vars
+
+### Add a themed UI token / element
+1. Add the CSS var to `ThemeCssVars` in `types/theme.ts`
+2. Set a value in **every** theme in `THEMES` (required — no theme may omit it)
+3. Add `:root` fallback in `app.css` if needed
+4. Use only `var(--theme-…)` in Components/CSS — never a one-off accent hex in JSX for themeable surfaces
+
+### Must (themes)
+- New accent/surface color → new `--theme-*` in the type + all themes
+- Tab chips use `theme.tab` utilities; shell/surfaces use CSS vars
+- Theme switch must recolor background, panel, sidebar, cards, buttons, orbs
+
+## Must
+- Typed props/state. Prefer explicit types over any.
+- Components: no axios/fetch. Call via props or Page/hook.
+- api/: no JSX. One module per resource (tabs, notes…).
+- Errors: surface to user; never empty catch.
+- Names: PascalCase components/files; camelCase fns; useX hooks.
+- Styles: Tailwind + theme CSS vars (`app.css` / `lib/themes.ts`). Keep UI lean.
+- Keep Page thin: extract repeated logic to hooks.
+
+## Never
+- Business/HTTP logic inside presentational Components
+- Duplicate API calls / types across files
+- Dead code, console noise in prod paths, untyped any without reason
+- Hard-coded theme accents in Components (bypass `--theme-*`)
+- Partial theme definitions (missing vars in some themes)

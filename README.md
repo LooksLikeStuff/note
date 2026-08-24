@@ -1,59 +1,73 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Note
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Личное веб-приложение для быстрых заметок: вкладки как в браузере, внутри каждой — список заметок (обычные / важные / мусор). Без регистрации в MVP.
 
-## About Laravel
+Краткий контекст продукта: [`rules/context.txt`](rules/context.txt).
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Клиенты общаются только через **REST API** (+ Swagger). Web UI — React SPA на axios. Тот же API рассчитан на будущее Flutter-приложение.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Стек
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- Backend: Laravel 12 + PHP 8.2+ (REST API)
+- Docs: OpenAPI / Swagger (l5-swagger)
+- Web UI: React + TypeScript + Tailwind CSS 4 (Vite SPA)
+- БД: SQLite локально (совместимо с MySQL/Postgres через Eloquent)
 
-## Learning Laravel
+## Запуск
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+```bash
+composer install
+cp .env.example .env   # если ещё нет
+php artisan key:generate
+touch database/database.sqlite
+php artisan migrate
+php artisan db:seed   # опционально: вкладка «Входящие» с примерами
+npm install
+composer run dev
+```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- Web SPA: http://127.0.0.1:8000
+- REST API: http://127.0.0.1:8000/api/...
+- Swagger UI: http://127.0.0.1:8000/api/documentation
 
-## Laravel Sponsors
+Перегенерация OpenAPI:
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+```bash
+php artisan l5-swagger:generate
+```
 
-### Premium Partners
+CORS для внешних клиентов (Flutter / отдельный фронт) — `CORS_ALLOWED_ORIGINS` в `.env` (по умолчанию `*`).
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+## Возможности MVP
 
-## Contributing
+- Бесконечные вкладки (`+`), переименование (двойной клик), закрытие
+- Заметки: `regular` (мусор), `important`, `trash`
+- Сортировка вкладок по `position` (drag-and-drop), заметок по `updated_at`
+- Полноэкранный режим
+- Активная вкладка сохраняется в `localStorage`
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Архитектура backend
 
-## Code of Conduct
+`Controller → FormRequest → Service → Model`, ответ через `Resource`, права через `Policy`, Swagger-атрибуты над методами API-контроллеров.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Конфиг лимитов: [`config/notes.php`](config/notes.php).
 
-## Security Vulnerabilities
+## Git workflow
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Полные правила: [`rules/git-flow.txt`](rules/git-flow.txt).
 
-## License
+- Интеграционная ветка: **`dev`**. В `main` мержит только владелец репозитория.
+- На каждую задачу — ветка `feature/<slug>` или `chore/<slug>` от `dev`.
+- После готовности: commit → push ветки → merge в `dev` → push `dev`.
+- Не пушить напрямую в `main`, не делать force-push.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```bash
+git checkout dev
+git pull
+git checkout -b feature/my-task
+# ... работа, коммиты ...
+git push -u origin HEAD
+git checkout dev
+git merge feature/my-task
+git push origin dev
+```
